@@ -1,9 +1,6 @@
 package com.example.order_ingestion.dtos;
 
-import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Positive;
-import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.*;
 import lombok.Data;
 
 import java.math.BigDecimal;
@@ -22,4 +19,10 @@ public class PartnerBOrder {
 
     @PositiveOrZero(message = "discount cannot be negative")
     private BigDecimal discount;
+
+    @AssertTrue(message = "discount cannot exceed total")
+    public boolean isDiscountValid() {
+        if (discount == null) return true;
+        return discount.compareTo(total) <= 0;
+    }
 }
