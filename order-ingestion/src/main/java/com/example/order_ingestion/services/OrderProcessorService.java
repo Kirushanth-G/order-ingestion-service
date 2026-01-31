@@ -6,13 +6,13 @@ import com.example.order_ingestion.repositories.OrderEventRepository;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 import jakarta.transaction.Transactional;
-import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 
 @Slf4j
-@AllArgsConstructor
+@RequiredArgsConstructor
 @Service
 public class OrderProcessorService {
     private final OrderQueue orderQueue;
@@ -51,15 +51,11 @@ public class OrderProcessorService {
     @Transactional
     public void processSingleOrder(OrderEvent order) {
         try {
-            Long currentMax = orderEventRepository.findMaxSequenceNumber(order.getPartnerId());
-            long nextSeq = (currentMax == null ? 0 : currentMax) + 1;
-            order.setSequenceNumber(nextSeq);
-
             orderEventRepository.save(order);
-            log.info("✅ Saved Order: Partner={}, Seq={}", order.getPartnerId(), nextSeq);
+            log.info("Saved Order: Partner={}, Seq={}", order.getPartnerId(), order.getSequenceNumber());
 
         } catch (DataIntegrityViolationException e) {
-            log.warn("⚠️ Duplicate Order Ignored: Partner={}, Seq={}",
+            log.warn("Duplicate Order Ignored: Partner={}, Seq={}",
                     order.getPartnerId(), order.getSequenceNumber());
         }
     }

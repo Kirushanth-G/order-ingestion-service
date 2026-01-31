@@ -1,10 +1,12 @@
 package com.example.order_ingestion.queue;
 
 import com.example.order_ingestion.entities.OrderEvent;
+import org.springframework.stereotype.Component;
 
 import java.util.concurrent.BlockingQueue;
 import java.util.concurrent.LinkedBlockingQueue;
 
+@Component
 public class OrderQueue {
     private final BlockingQueue<OrderEvent> validQueue = new LinkedBlockingQueue<>();
 

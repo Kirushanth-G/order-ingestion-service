@@ -17,6 +17,7 @@ public class OrderIngestionService {
     private final PartnerAdapterFactory adapterFactory;
     private final OrderMapper orderMapper;
     private final OrderQueue orderQueue;
+    private final SequenceGeneratorService sequenceGeneratorService;
 
     public void ingestOrder(String partnerId, Object partnerOrder) {
         PartnerOrderAdapter<Object> adapter = (PartnerOrderAdapter<Object>) adapterFactory.getAdapter(partnerId);
@@ -25,6 +26,9 @@ public class OrderIngestionService {
         OrderEvent orderEvent = orderMapper.toEntity(unifiedOrderDTO);
         orderEvent.setReceivedTime(LocalDateTime.now());
         orderEvent.setProcessedTime(LocalDateTime.now());
+        long seq = sequenceGeneratorService.getNextSequence(partnerId);
+        orderEvent.setSequenceNumber(seq);
+
         orderQueue.publishValidOrder(orderEvent);
     }
 }
