@@ -4,6 +4,10 @@
 - Used mapsruct for dto mapping.
 - Used lombok to avoid boiler plate getter setters.
 
+## TODO
+- [ ] Build React front end for visualization and monitoring.
+- [ ] Have to write more unit tests in backend.
+
 ### Prerequisites
 * **Java 21** (Required)
 * Maven (Optional, wrapper included)
