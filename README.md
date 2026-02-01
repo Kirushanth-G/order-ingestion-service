@@ -14,6 +14,8 @@
   Instead of generally ingesting dtos thorugh mapper, which makes the code more modular.
   If a new partnerC joins, creating a PartnerCOrderAdapter is enough and zero changes to the serice logics.
 
+  ![Adapter Design Pattern](PartnerAOrder.png)
+
 - **Sequence generation per partner**
   To make sure we get the relevant next sequence number for a partner faster, I have implemented in-memory caching with database backup. If the system is running continously we will have quick lookup from in-memory cache(HashMap) or else if the app restarts, it will fetch the last sequence from database.
   Also Lazy loading enabled, only the sequence numbers are obtained from the database only when a order comes.
