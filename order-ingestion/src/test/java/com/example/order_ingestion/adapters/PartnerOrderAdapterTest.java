@@ -2,7 +2,7 @@ package com.example.order_ingestion.adapters;
 
 import com.example.order_ingestion.dtos.PartnerAOrder;
 import com.example.order_ingestion.dtos.PartnerBOrder;
-import com.example.order_ingestion.dtos.UnifiedOrderDTO;
+import com.example.order_ingestion.dtos.UnifiedOrderDto;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
@@ -28,7 +28,7 @@ class PartnerOrderAdapterTest {
         partnerAOrder.setAmount(new BigDecimal("25.50"));
 
         // When: Convert to unified format
-        UnifiedOrderDTO unified = partnerAAdapter.toUnifiedOrder(partnerAOrder);
+        UnifiedOrderDto unified = partnerAAdapter.toUnifiedOrder(partnerAOrder);
 
         // Then: All fields mapped correctly
         assertNotNull(unified);
@@ -56,7 +56,7 @@ class PartnerOrderAdapterTest {
         partnerBOrder.setDiscount(new BigDecimal("10.00"));
 
         // When: Convert to unified format
-        UnifiedOrderDTO unified = partnerBAdapter.toUnifiedOrder(partnerBOrder);
+        UnifiedOrderDto unified = partnerBAdapter.toUnifiedOrder(partnerBOrder);
 
         // Then: All fields mapped correctly including discount calculation
         assertNotNull(unified);
@@ -81,7 +81,7 @@ class PartnerOrderAdapterTest {
         partnerBOrder.setDiscount(null); // No discount
 
         // When: Convert to unified format
-        UnifiedOrderDTO unified = partnerBAdapter.toUnifiedOrder(partnerBOrder);
+        UnifiedOrderDto unified = partnerBAdapter.toUnifiedOrder(partnerBOrder);
 
         // Then: Discount defaults to zero
         assertNotNull(unified);

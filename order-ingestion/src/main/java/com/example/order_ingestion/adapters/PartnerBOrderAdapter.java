@@ -1,7 +1,7 @@
 package com.example.order_ingestion.adapters;
 
 import com.example.order_ingestion.dtos.PartnerBOrder;
-import com.example.order_ingestion.dtos.UnifiedOrderDTO;
+import com.example.order_ingestion.dtos.UnifiedOrderDto;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -16,7 +16,7 @@ public class PartnerBOrderAdapter implements PartnerOrderAdapter<PartnerBOrder> 
             DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
 
     @Override
-    public UnifiedOrderDTO toUnifiedOrder(PartnerBOrder partnerOrder) {
+    public UnifiedOrderDto toUnifiedOrder(PartnerBOrder partnerOrder) {
         LocalDateTime eventTime = convertStringToDateTime(partnerOrder.getPurchaseTime());
         BigDecimal grossAmount = partnerOrder.getTotal();
         BigDecimal discount = partnerOrder.getDiscount() != null
@@ -24,7 +24,7 @@ public class PartnerBOrderAdapter implements PartnerOrderAdapter<PartnerBOrder> 
                 : BigDecimal.ZERO;
         BigDecimal netAmount = grossAmount.subtract(discount);
 
-        return UnifiedOrderDTO.builder()
+        return UnifiedOrderDto.builder()
                 .productCode(partnerOrder.getItemCode())
                 .eventTime(eventTime)
                 .grossAmount(grossAmount)

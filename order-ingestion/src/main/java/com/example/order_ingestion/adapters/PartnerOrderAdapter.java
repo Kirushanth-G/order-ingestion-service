@@ -1,9 +1,9 @@
 package com.example.order_ingestion.adapters;
 
-import com.example.order_ingestion.dtos.UnifiedOrderDTO;
+import com.example.order_ingestion.dtos.UnifiedOrderDto;
 
 public interface PartnerOrderAdapter<T> {
-    UnifiedOrderDTO toUnifiedOrder(T partnerOrder);
+    UnifiedOrderDto toUnifiedOrder(T partnerOrder);
 
     String getPartnerId();
 }

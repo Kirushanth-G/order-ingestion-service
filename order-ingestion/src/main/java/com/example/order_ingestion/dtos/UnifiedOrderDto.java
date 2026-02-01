@@ -12,7 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class UnifiedOrderDTO {
+public class UnifiedOrderDto {
     private String productCode;
     private LocalDateTime eventTime;
     private BigDecimal grossAmount;

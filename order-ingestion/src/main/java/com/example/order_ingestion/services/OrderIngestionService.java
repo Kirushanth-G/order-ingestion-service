@@ -2,7 +2,7 @@ package com.example.order_ingestion.services;
 
 import com.example.order_ingestion.adapters.PartnerAdapterFactory;
 import com.example.order_ingestion.adapters.PartnerOrderAdapter;
-import com.example.order_ingestion.dtos.UnifiedOrderDTO;
+import com.example.order_ingestion.dtos.UnifiedOrderDto;
 import com.example.order_ingestion.entities.ErrorOrder;
 import com.example.order_ingestion.entities.OrderEvent;
 import com.example.order_ingestion.mappers.OrderMapper;
@@ -23,7 +23,7 @@ public class OrderIngestionService {
 
     public void ingestOrder(String partnerId, Object partnerOrder) {
         PartnerOrderAdapter<Object> adapter = (PartnerOrderAdapter<Object>) adapterFactory.getAdapter(partnerId);
-        UnifiedOrderDTO unifiedOrderDTO = adapter.toUnifiedOrder(partnerOrder);
+        UnifiedOrderDto unifiedOrderDTO = adapter.toUnifiedOrder(partnerOrder);
 
         OrderEvent orderEvent = orderMapper.toEntity(unifiedOrderDTO);
         orderEvent.setReceivedTime(LocalDateTime.now());

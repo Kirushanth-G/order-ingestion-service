@@ -1,7 +1,7 @@
 package com.example.order_ingestion.adapters;
 
 import com.example.order_ingestion.dtos.PartnerAOrder;
-import com.example.order_ingestion.dtos.UnifiedOrderDTO;
+import com.example.order_ingestion.dtos.UnifiedOrderDto;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
@@ -15,13 +15,13 @@ public class PartnerAOrderAdapter implements PartnerOrderAdapter<PartnerAOrder> 
     private static final String PARTNER_ID = "A";
 
     @Override
-    public UnifiedOrderDTO toUnifiedOrder(PartnerAOrder partnerOrder) {
+    public UnifiedOrderDto toUnifiedOrder(PartnerAOrder partnerOrder) {
         LocalDateTime eventTime = convertEpochToDateTime(partnerOrder.getTransactionTimeMs());
         BigDecimal grossAmount = partnerOrder.getAmount();
         BigDecimal discount = BigDecimal.ZERO;
         BigDecimal netAmount = grossAmount; // No discount for Partner A
 
-        return UnifiedOrderDTO.builder()
+        return UnifiedOrderDto.builder()
                 .productCode(partnerOrder.getSkuId())
                 .eventTime(eventTime)
                 .grossAmount(grossAmount)
