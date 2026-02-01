@@ -32,4 +32,6 @@ public interface OrderEventRepository extends JpaRepository<OrderEvent, Long> {
             @Param("start") LocalDateTime start,
             @Param("end") LocalDateTime end
     );
+
+    boolean existsByPartnerIdAndProductCodeAndEventTime(String partnerId, String productCode, LocalDateTime eventTime);
 }
