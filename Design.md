@@ -1,80 +1,127 @@
-# System Design Document: Order Ingestion Platform
+# Order Ingestion Platform – System Design
+Each partner sends orders in **different formats** and may resend the same order multiple times. The system must therefore:
 
-## 1. System Overview
-The Order Ingestion Platform is a high-throughput microservice designed to ingest, validate, and process real-time order events from multiple external partners (currently A and B). It standardizes diverse external formats into a single internal schema, prevents duplicate orders (idempotency), and provides analytical summaries via a REST API and Dashboard.
-
-## 2. Architecture: Local vs. Cloud
-The current implementation focuses on logical correctness using local abstractions. The target architecture is designed for AWS.
-
-| Component | Local Implementation (Current) | Production Cloud Design (AWS) |
-| :--- | :--- | :--- |
-| **Ingestion API** | Spring Boot (Tomcat) | AWS API Gateway + Application Load Balancer (ALB) |
-| **Compute** | Local JVM | AWS Fargate (ECS) |
-| **Message Queue** | `LinkedBlockingQueue` (In-Memory) | **Amazon SQS** (Simple Queue Service) |
-| **Database** | H2 (In-Memory) | **Amazon RDS for PostgreSQL** |
-| **Secrets** | Hardcoded Map | AWS Secrets Manager |
-| **Frontend** | React (Localhost) | AWS S3 (Static Website) + CloudFront (CDN) |
+- Validate incoming requests
+- Normalize partner-specific payloads into a **single internal schema**
+- Prevent **duplicate order processing** (idempotency)
+- Process orders reliably at high throughput
+- Store data safely for analytics and reporting
+- Expose summaries via REST APIs and a dashboard
 
 ---
 
-## 3. AWS Cloud Deployment Strategy
-This section details how the application translates to a production AWS environment.
+## 1. Local vs Production Architecture
 
-### 3.1 Compute Strategy: Containers (AWS Fargate)
-**Decision:** Use **AWS Fargate** (Serverless Containers) instead of AWS Lambda.
-* **Reasoning:** The application runs continuous background threads (`OrderProcessorService`) to consume messages from queues. Long-running polling consumers are cost-prohibitive and architecturally complex in Lambda (which has timeout limits). Fargate provides a robust environment for Spring Boot's "always-on" nature.
+During development, the system runs locally using lightweight components to focus on correctness and logic.  
+In production, the same architecture is mapped to **managed AWS services** for scalability, durability, and security.
 
-### 3.2 Streaming & Queues: Amazon SQS
-**Decision:** Replace the internal `BlockingQueue` with **Amazon SQS**.
-* **Workflow:**
-    1.  **Ingestion:** Controller validates request -> Sends message to `valid_orders_queue` (SQS).
-    2.  **Processing:** Service listens to SQS -> Persists to RDS.
-* **Why SQS?**
-    * **Durability:** Messages are stored across multiple availability zones. If the app crashes, messages are not lost (unlike the current in-memory queue).
-    * **Dead Letter Queues (DLQ):** Automatically capture "poison pill" messages that fail processing 3+ times, allowing for manual investigation.
-    * **Scaling:** We can trigger auto-scaling of Fargate tasks based on the `ApproximateNumberOfMessagesVisible` metric in SQS.
+| Layer | Local (Development) | AWS (Production) |
+|-----|--------------------|------------------|
+| API | Spring Boot (Tomcat) | API Gateway + ALB |
+| Compute | Local JVM | ECS (AWS Fargate) |
+| Queue | In-memory BlockingQueue | Amazon SQS |
+| Database | H2 (In-memory) | Amazon RDS (PostgreSQL) |
+| Secrets | Hardcoded config | AWS Secrets Manager |
+| Frontend | React (localhost) | S3 + CloudFront |
 
-### 3.3 Storage: Amazon RDS (PostgreSQL)
-**Decision:** Use **Amazon RDS (PostgreSQL)**.
-* **Why Relational?** The requirements involve complex aggregations (e.g., *Monthly Sales Summary*, *Date Range Queries*). SQL is highly efficient for `SUM()`, `COUNT()`, and `GROUP BY` operations compared to NoSQL (DynamoDB), which would require complex indexing or Analytics/Stream processing for simple summaries.
-* **Data Integrity:** ACID transactions are critical for financial order data.
+---
+
+## 2. AWS Deployment Design
+
+### 2.1 Compute Layer – ECS with Fargate
+
+**Decision:** Use **AWS Fargate** instead of AWS Lambda.
+
+**Reasoning:**
+- The system contains a **long-running background consumer** (`OrderProcessorService`) that continuously polls a queue.
+- Lambda is not ideal for always-on workloads due to execution time limits and cost inefficiencies.
+- Fargate allows Spring Boot services to run continuously without managing EC2 instances.
+
+**Further pros:**
+- Serverless container execution
+- Easy horizontal scaling
+- Clean fit for microservice workloads
+
+---
+
+### 2.2 Messaging Layer – Amazon SQS
+
+**Decision:** Replace the local `BlockingQueue` with **Amazon SQS**.
+
+**Order Flow:**
+1. Partner sends an order to the ingestion API
+2. API validates and normalizes the payload
+3. Order is pushed to `valid_orders_queue`
+4. ECS consumers read messages and persist data to RDS
+
+**Why SQS:**
+- Messages are **durable and highly available**
+- API and processing layers are **loosely coupled**
+- **Dead Letter Queue (DLQ)** captures repeatedly failing messages
+- ECS services can auto-scale based on queue depth
+
+This eliminates data loss risks present in in-memory queues.
+
+---
+
+### 2.3 Database Layer – Amazon RDS (PostgreSQL)
+
+**Decision:** Use **PostgreSQL on Amazon RDS**.
+
+**Why a relational database:**
+- The system requires:
+  - Monthly and daily sales summaries
+  - Partner-based aggregations
+  - Date-range queries
+- SQL handles these efficiently using `GROUP BY`, `SUM`, and indexes
+
+**Additional benefits:**
+- ACID transactions (critical for order data)
+- Automated backups and failover
+- Strong integration with Spring Data JPA
+
+---
 
 ### 3.4 Frontend Hosting
-**Decision:** **S3 + CloudFront**.
-* The React frontend is a Single Page Application (SPA).
-* **S3:** Stores the built static files (HTML, CSS, JS).
-* **CloudFront:** Caches content globally (CDN) for low latency and handles HTTPS termination.
 
-### 3.5 Security
-* **Network:** The RDS instance runs in a private subnet, accessible only by the Fargate tasks.
-* **Secrets:** API Keys and Database Credentials are stored in **AWS Secrets Manager**, injected into the container as environment variables at runtime.
-* **WAF:** AWS WAF placed in front of the ALB to rate-limit requests and block malicious IP addresses.
+The frontend is a **React Single Page Application (SPA)**.
 
----
+**Deployment approach:**
+- Build React app and upload static assets to **Amazon S3**
+- Serve content globally using **CloudFront**
 
-
+**Benefits:**
+- Low latency via CDN caching
+- Automatic HTTPS
+- Very low operational cost
 
 ---
 
-## 5. Observability Plan
-To ensure operational health in AWS:
+## 4. Security Design
 
-1.  **Logs:** Use **Amazon CloudWatch Logs**.
-    * Structured JSON logging (via Logback) to allow querying error rates by `partner_id`.
-2.  **Metrics:** Use **Spring Boot Actuator + Micrometer** to push metrics to CloudWatch.
-    * Key Metric: `orders.ingested.count` (Counter)
-    * Key Metric: `queue.depth` (Gauge)
-    * Key Metric: `processing.latency` (Timer)
-3.  **Alarms:**
-    * Trigger PagerDuty if `error_orders_queue` > 10 messages (indicates a bad deployment or partner API change).
-    * Trigger Scaling if `valid_orders_queue` > 1000 messages.
+Security is integrated into the architecture:
+
+- **Private Subnets:** RDS runs in private subnets, not publicly accessible
+- **IAM Roles:** ECS tasks access AWS services via IAM (no credentials in code)
+- **Secrets Manager:** Database credentials and API keys are injected securely at runtime
+- **AWS WAF:** Protects the ALB from:
+  - Excessive request rates
+  - Malicious IPs
+  - Common web exploits
 
 ---
 
-## 6. CI/CD Pipeline
-We assume a GitHub Actions workflow:
-1.  **Commit:** Developer pushes code.
-2.  **Test:** Run Unit & Integration Tests (Maven).
-3.  **Build:** Build Docker Image.
-4.  **Scan:** ECR Image Scan for vulnerabilities.
-5.  **Deploy:** Update AWS ECS Service (Rolling update).
+## 5. CI/CD Pipeline
+
+The deployment pipeline uses **GitHub Actions**:
+
+1. Code pushed to repository
+2. Unit and integration tests executed
+3. Docker image built
+4. Image scanned in Amazon ECR
+5. ECS service updated using rolling deployment
+
+This ensures **zero downtime deployments** and quick rollback if needed.
+
+---
+
